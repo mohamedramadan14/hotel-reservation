@@ -27,4 +27,4 @@ go.work.sum
 bin
 go.sum
 
-./data/**
+_data/*
