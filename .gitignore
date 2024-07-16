@@ -27,4 +27,6 @@ go.work.sum
 bin
 go.sum
 
-_data/*
+data/**
+
+.idea

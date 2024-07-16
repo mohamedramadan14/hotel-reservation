@@ -16,9 +16,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const testMongoURI = "mongodb://localhost:27017"
-const testDBName = "hotel-reservation-test"
-
 type testdb struct {
 	db.UserStore
 }
@@ -29,12 +26,12 @@ func (tdb *testdb) tearDown(t *testing.T) {
 	}
 }
 func setup(_ *testing.T) *testdb {
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(testMongoURI))
+	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(db.DBURI))
 	if err != nil {
 		log.Fatal(err)
 	}
 	return &testdb{
-		UserStore: db.NewMongoUserStore(client, testDBName),
+		UserStore: db.NewMongoUserStore(client, db.TestDBNAME),
 	}
 }
 
@@ -58,10 +55,7 @@ func TestPostUser(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	/* bodyBytes, _ := io.ReadAll(resp.Body)
-	bodyString := string(bodyBytes)
-	fmt.Println(resp.Status)
-	fmt.Println(bodyString) */
+
 	var user types.User
 	json.NewDecoder(resp.Body).Decode(&user)
 	if user.ID == primitive.NilObjectID {
