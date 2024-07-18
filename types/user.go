@@ -80,3 +80,11 @@ func NewUserFromParams(params CreateUserParams) (*User, error) {
 		EncryptedPassword: string(enPassword),
 	}, nil
 }
+
+func IsValidPassword(encryptedPassword string, password string) (bool, error) {
+	err := bcrypt.CompareHashAndPassword([]byte(encryptedPassword), []byte(password))
+	if err != nil {
+		return false, fmt.Errorf("invalid Credentials")
+	}
+	return true, nil
+}

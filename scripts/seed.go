@@ -18,6 +18,7 @@ var (
 	client     *mongo.Client
 	hotelStore db.HotelStore
 	roomStore  db.RoomStore
+	userStore  db.UserStore
 	ctx        context.Context
 	err        error
 	faker      = faker2.New()
@@ -37,9 +38,25 @@ func init() {
 	}
 
 	hotelStore = db.NewMongoHotelStore(client)
+	userStore = db.NewMongoUserStore(client)
 	roomStore = db.NewMongoRoomStore(client, hotelStore)
 }
 
+func seedUser(fName, lName, email string) {
+	user, err := types.NewUserFromParams(types.CreateUserParams{
+		Email:     email,
+		FirstName: fName,
+		LastName:  lName,
+		Password:  "testPass",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = userStore.CreateUser(ctx, user)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
 func seedHotel(name string, location string, rating float64) {
 	hotel := types.Hotel{
 		Name:     name,
@@ -92,6 +109,6 @@ func main() {
 
 		seedHotel(faker.Company().Name(), faker.Address().City(), float64(rand.Intn(51))/10.0)
 	}
-
+	seedUser("mohamed", "ramadan", "mo@gmail.com")
 	fmt.Println("Seeding completed...")
 }

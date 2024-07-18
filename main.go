@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/mohamedramadan14/hotel-reservation/api/middleware"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -32,6 +33,7 @@ func main() {
 		hotelStore  = db.NewMongoHotelStore(client)
 		roomStore   = db.NewMongoRoomStore(client, hotelStore)
 		userHandler = api.NewUserHandler(userStore)
+		authHandler = api.NewAuthHandler(userStore)
 		store       = &db.Store{
 			Hotel: hotelStore,
 			Room:  roomStore,
@@ -39,8 +41,12 @@ func main() {
 		}
 		hotelHandler = api.NewHotelHandler(store)
 		app          = fiber.New(config)
-		apiV1        = app.Group("/api/v1")
+		auth         = app.Group("/api")
+		apiV1        = app.Group("/api/v1", middleware.JWTAuthentication)
 	)
+
+	// Auth
+	auth.Post("/auth/login", authHandler.HandleAuthentication)
 
 	// User
 	apiV1.Post("/user", userHandler.HandlePostUser)
