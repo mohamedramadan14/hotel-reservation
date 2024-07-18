@@ -3,55 +3,95 @@ package main
 import (
 	"context"
 	"fmt"
+	faker2 "github.com/jaswdr/faker"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
+	"math/rand"
 
 	"github.com/mohamedramadan14/hotel-reservation/db"
 	"github.com/mohamedramadan14/hotel-reservation/types"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func main() {
+var (
+	client     *mongo.Client
+	hotelStore db.HotelStore
+	roomStore  db.RoomStore
+	ctx        context.Context
+	err        error
+	faker      = faker2.New()
+	count      = 5
+)
+
+func init() {
 	ctx := context.Background()
 	fmt.Println("Seeding database...")
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(db.DBURI))
+	client, err = mongo.Connect(context.TODO(), options.Client().ApplyURI(db.DBURI))
 	if err != nil {
 		log.Fatal(err)
 	}
-	hotelStore := db.NewMongoHotelStore(client, db.DBNAME)
-	roomStore := db.NewMongoRoomStore(client, db.DBNAME)
 
+	if err := client.Database(db.DBNAME).Drop(ctx); err != nil {
+		log.Fatal(err)
+	}
+
+	hotelStore = db.NewMongoHotelStore(client)
+	roomStore = db.NewMongoRoomStore(client, hotelStore)
+}
+
+func seedHotel(name string, location string, rating float64) {
 	hotel := types.Hotel{
-		Name:     "Grand Hotel",
-		Location: "New York",
+		Name:     name,
+		Location: location,
+		Rooms:    []primitive.ObjectID{},
+		Rating:   rating,
 	}
 
-	roomA := types.Room{
-		Type:      types.Single,
-		BasePrice: 100,
+	rooms := []types.Room{
+		{
+			Size:    "Single",
+			SeeSide: false,
+			Price:   100,
+		},
+		{
+			Size:    "Double",
+			SeeSide: false,
+			Price:   200,
+		},
+		{
+			Size:    "Single",
+			SeeSide: true,
+			Price:   500,
+		},
+		{
+			Size:    "Deluxe",
+			Price:   500,
+			SeeSide: false,
+		},
 	}
-
-	roomB := types.Room{
-		Type:      types.SeaSide,
-		BasePrice: 500,
-	}
-
-	_ = roomB
 
 	insertedHotel, err := hotelStore.InsertHotel(ctx, &hotel)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	roomA.HotelID = insertedHotel.ID
-
-	insertedRoom, err := roomStore.InsertRoom(ctx, &roomA)
-	if err != nil {
-		log.Fatal(err)
+	for _, room := range rooms {
+		room.HotelID = insertedHotel.ID
+		insertedRoom, err := roomStore.InsertRoom(ctx, &room)
+		if err != nil {
+			log.Fatal(err)
+		}
+		room.ID = insertedRoom.ID
 	}
 
-	roomA.ID = insertedRoom.ID
+}
+func main() {
 
-	fmt.Println(insertedHotel)
-	fmt.Println(insertedRoom)
+	for i := 0; i < count; i++ {
+
+		seedHotel(faker.Company().Name(), faker.Address().City(), float64(rand.Intn(51))/10.0)
+	}
+
+	fmt.Println("Seeding completed...")
 }

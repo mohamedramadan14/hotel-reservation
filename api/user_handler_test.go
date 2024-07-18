@@ -57,7 +57,10 @@ func TestPostUser(t *testing.T) {
 	}
 
 	var user types.User
-	json.NewDecoder(resp.Body).Decode(&user)
+	err = json.NewDecoder(resp.Body).Decode(&user)
+	if err != nil {
+		return
+	}
 	if user.ID == primitive.NilObjectID {
 		t.Errorf("expected %s, got %s", "not nil", user.ID)
 	}

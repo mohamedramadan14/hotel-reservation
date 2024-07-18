@@ -35,10 +35,10 @@ func (s *MongoUserStore) Drop(ctx context.Context) error {
 	fmt.Println("--- dropping User Collection ---")
 	return s.coll.Drop(ctx)
 }
-func NewMongoUserStore(client *mongo.Client, dbName string) *MongoUserStore {
+func NewMongoUserStore(client *mongo.Client) *MongoUserStore {
 	return &MongoUserStore{
 		client: client,
-		coll:   client.Database(dbName).Collection(userCollection),
+		coll:   client.Database(DBNAME).Collection(userCollection),
 	}
 }
 
