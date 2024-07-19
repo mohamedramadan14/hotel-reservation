@@ -9,12 +9,26 @@ import (
 	"github.com/mohamedramadan14/hotel-reservation/types"
 	"go.mongodb.org/mongo-driver/mongo"
 	"log"
+	"net/http"
 	"os"
 	"time"
 )
 
 type AuthHandler struct {
 	userStore db.UserStore
+}
+
+type genericResp struct {
+	Type string `json:"type"`
+	Msg  string `json:"message"`
+}
+
+func invalidCredentialsResponseGenerator(c *fiber.Ctx) error {
+	return c.Status(http.StatusUnauthorized).JSON(
+		genericResp{
+			Type: "error",
+			Msg:  "invalid Credentials",
+		})
 }
 
 func NewAuthHandler(userStore db.UserStore) *AuthHandler {
@@ -41,15 +55,16 @@ func (h *AuthHandler) HandleAuthentication(c *fiber.Ctx) error {
 	user, err := h.userStore.GetUserByEmail(c.Context(), authParams.Email)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return fmt.Errorf("invalid Credentials")
+			return invalidCredentialsResponseGenerator(c)
 		}
 		return err
 	}
 
 	_, err = types.IsValidPassword(user.EncryptedPassword, authParams.Password)
 	if err != nil {
-		return err
+		return invalidCredentialsResponseGenerator(c)
 	}
+
 	token := generateTokenFromUser(user)
 	fmt.Println("authenticated ->", user.FirstName)
 	resp := AuthResponse{

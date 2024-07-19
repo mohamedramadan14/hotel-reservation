@@ -7,4 +7,4 @@ run: build
 	@./bin/api
 
 test:
-	@go test -v ./... --count=1		
+	@go test -v ./... --count=1
