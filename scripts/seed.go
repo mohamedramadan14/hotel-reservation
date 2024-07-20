@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	faker2 "github.com/jaswdr/faker"
+	"github.com/mohamedramadan14/hotel-reservation/api"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"math/rand"
+	"time"
 
 	"github.com/mohamedramadan14/hotel-reservation/db"
 	"github.com/mohamedramadan14/hotel-reservation/types"
@@ -15,14 +17,15 @@ import (
 )
 
 var (
-	client     *mongo.Client
-	hotelStore db.HotelStore
-	roomStore  db.RoomStore
-	userStore  db.UserStore
-	ctx        context.Context
-	err        error
-	faker      = faker2.New()
-	count      = 5
+	client       *mongo.Client
+	hotelStore   db.HotelStore
+	roomStore    db.RoomStore
+	userStore    db.UserStore
+	bookingStore db.BookingStore
+	ctx          context.Context
+	err          error
+	faker        = faker2.New()
+	count        = 5
 )
 
 func init() {
@@ -40,9 +43,10 @@ func init() {
 	hotelStore = db.NewMongoHotelStore(client)
 	userStore = db.NewMongoUserStore(client)
 	roomStore = db.NewMongoRoomStore(client, hotelStore)
+	bookingStore = db.NewMongoBookingStore(client)
 }
 
-func seedUser(fName string, lName string, email string, password string, isAdmin bool) {
+func seedUser(fName string, lName string, email string, password string, isAdmin bool) *types.User {
 	user, err := types.NewUserFromParams(types.CreateUserParams{
 		Email:     email,
 		FirstName: fName,
@@ -55,12 +59,16 @@ func seedUser(fName string, lName string, email string, password string, isAdmin
 
 	user.IsAdmin = isAdmin
 
-	_, err = userStore.CreateUser(ctx, user)
+	insertedUser, err := userStore.CreateUser(ctx, user)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Printf("%s -> %s", user.Email, api.GenerateTokenFromUser(user))
+	return insertedUser
+
 }
-func seedHotel(name string, location string, rating float64) {
+func seedHotel(name string, location string, rating float64) *types.Hotel {
 	hotel := types.Hotel{
 		Name:     name,
 		Location: location,
@@ -68,51 +76,54 @@ func seedHotel(name string, location string, rating float64) {
 		Rating:   rating,
 	}
 
-	rooms := []types.Room{
-		{
-			Size:    "Single",
-			SeeSide: false,
-			Price:   100,
-		},
-		{
-			Size:    "Double",
-			SeeSide: false,
-			Price:   200,
-		},
-		{
-			Size:    "Single",
-			SeeSide: true,
-			Price:   500,
-		},
-		{
-			Size:    "Deluxe",
-			Price:   500,
-			SeeSide: false,
-		},
-	}
-
 	insertedHotel, err := hotelStore.InsertHotel(ctx, &hotel)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	for _, room := range rooms {
-		room.HotelID = insertedHotel.ID
-		insertedRoom, err := roomStore.InsertRoom(ctx, &room)
-		if err != nil {
-			log.Fatal(err)
-		}
-		room.ID = insertedRoom.ID
+	return insertedHotel
+}
+
+func seedRoom(size string, ss bool, price float64, hotelID primitive.ObjectID) *types.Room {
+	room := types.Room{
+		Size:    size,
+		SeaSide: ss,
+		Price:   price,
+		HotelID: hotelID,
 	}
 
+	insertedRoom, err := roomStore.InsertRoom(context.Background(), &room)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return insertedRoom
 }
+
+func seedBooking(roomID primitive.ObjectID, userID primitive.ObjectID, from time.Time, till time.Time) {
+	booking := &types.Booking{
+		UserID:   userID,
+		RoomID:   roomID,
+		FromDate: from,
+		TillDate: till,
+	}
+	booking, err := bookingStore.InsertBooking(context.Background(), booking)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Booking: ", booking.ID)
+}
+
 func main() {
 
-	for i := 0; i < count; i++ {
-
-		seedHotel(faker.Company().Name(), faker.Address().City(), float64(rand.Intn(51))/10.0)
-	}
-	seedUser("mohamed", "ramadan", "mo@gmail.com", "testPass", false)
+	mo := seedUser("mohamed", "ramadan", "mo@gmail.com", "testPass", false)
 	seedUser("Maged", "ramadan", "maged@gmail.com", "admin", true)
+
+	for i := 0; i < count; i++ {
+		h := seedHotel(faker.Company().Name(), faker.Address().City(), float64(rand.Intn(51))/10.0)
+		seedRoom("small", true, 89.99, h.ID)
+		seedRoom("normal", false, 129.99, h.ID)
+		room := seedRoom("King", true, 389.99, h.ID)
+		seedBooking(room.ID, mo.ID, time.Now(), time.Now().AddDate(0, 0, 2))
+	}
 	fmt.Println("Seeding completed...")
 }

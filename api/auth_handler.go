@@ -65,7 +65,7 @@ func (h *AuthHandler) HandleAuthentication(c *fiber.Ctx) error {
 		return invalidCredentialsResponseGenerator(c)
 	}
 
-	token := generateTokenFromUser(user)
+	token := GenerateTokenFromUser(user)
 	fmt.Println("authenticated ->", user.FirstName)
 	resp := AuthResponse{
 		Token: token,
@@ -74,7 +74,7 @@ func (h *AuthHandler) HandleAuthentication(c *fiber.Ctx) error {
 	return c.JSON(resp)
 }
 
-func generateTokenFromUser(user *types.User) string {
+func GenerateTokenFromUser(user *types.User) string {
 	now := time.Now()
 	validTill := now.Add(time.Hour * 72)
 	claims := jwt.MapClaims{

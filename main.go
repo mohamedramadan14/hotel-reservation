@@ -73,6 +73,7 @@ func main() {
 	// Booking
 	// TODO: Cancel A Booking
 	apiV1.Get("/booking/:id", bookingHandler.HandleGetBooking)
+	apiV1.Put("/booking/:id/cancel", bookingHandler.HandleCancelBooking)
 
 	// Admin Routes
 	admin.Get("/bookings", bookingHandler.HandleGetBookings)
