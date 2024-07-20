@@ -5,22 +5,33 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/mohamedramadan14/hotel-reservation/db"
 	"os"
 	"time"
 )
 
-func JWTAuthentication(c *fiber.Ctx) error {
-	token, ok := c.GetReqHeaders()["X-Api-Token"]
-	if !ok {
-		return fmt.Errorf("unauthorized")
+func JWTAuthentication(userStore db.UserStore) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		token, ok := c.GetReqHeaders()["X-Api-Token"]
+		if !ok {
+			return fmt.Errorf("unauthorized")
+		}
+		claims, err := validateToken(token[len(token)-1])
+		if err != nil {
+			return err
+		}
+		userID := claims["id"].(string)
+		user, err := userStore.GetUserByID(c.Context(), userID)
+		if err != nil {
+			return fmt.Errorf("unauthorized")
+		}
+		// set current authenticated user to the context
+		c.Context().SetUserValue("user", user)
+		return c.Next()
 	}
-	if err := validateToken(token[len(token)-1]); err != nil {
-		return err
-	}
-	return c.Next()
 }
 
-func validateToken(tokenStr string) error {
+func validateToken(tokenStr string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			fmt.Println("invalid signing method")
@@ -32,11 +43,23 @@ func validateToken(tokenStr string) error {
 	})
 	if err != nil {
 		log.Fatal("Failed to parse JWT token", err)
-		return fmt.Errorf("unauthorized")
+		return nil, fmt.Errorf("unauthorized")
 	}
 
-	if claims, ok := token.Claims.(jwt.MapClaims); !ok || !token.Valid || time.Unix(int64(claims["expire"].(float64)), 0).Before(time.Now()) {
-		return fmt.Errorf("invalid credentials")
+	claims, ok := token.Claims.(jwt.MapClaims)
+	expireStr, ok := claims["expire"].(string)
+	if !ok || !token.Valid {
+		return nil, fmt.Errorf("invalid credentials")
 	}
-	return nil
+
+	expireTime, err := time.Parse(time.RFC3339, expireStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid expiration time format")
+	}
+
+	if time.Now().After(expireTime) {
+		return nil, fmt.Errorf("token has expired")
+	}
+
+	return claims, nil
 }

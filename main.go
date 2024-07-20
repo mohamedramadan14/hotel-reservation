@@ -29,20 +29,23 @@ func main() {
 	}
 
 	var (
-		userStore   = db.NewMongoUserStore(client)
-		hotelStore  = db.NewMongoHotelStore(client)
-		roomStore   = db.NewMongoRoomStore(client, hotelStore)
-		userHandler = api.NewUserHandler(userStore)
-		authHandler = api.NewAuthHandler(userStore)
-		store       = &db.Store{
-			Hotel: hotelStore,
-			Room:  roomStore,
-			User:  userStore,
+		userStore    = db.NewMongoUserStore(client)
+		hotelStore   = db.NewMongoHotelStore(client)
+		bookingStore = db.NewMongoBookingStore(client)
+		roomStore    = db.NewMongoRoomStore(client, hotelStore)
+		userHandler  = api.NewUserHandler(userStore)
+		authHandler  = api.NewAuthHandler(userStore)
+		store        = &db.Store{
+			Hotel:   hotelStore,
+			Room:    roomStore,
+			User:    userStore,
+			Booking: bookingStore,
 		}
+		roomHandler  = api.NewRoomHandler(store)
 		hotelHandler = api.NewHotelHandler(store)
 		app          = fiber.New(config)
 		auth         = app.Group("/api")
-		apiV1        = app.Group("/api/v1", middleware.JWTAuthentication)
+		apiV1        = app.Group("/api/v1", middleware.JWTAuthentication(userStore))
 	)
 
 	// Auth
@@ -59,6 +62,10 @@ func main() {
 	apiV1.Get("/hotel", hotelHandler.HandleGetHotels)
 	apiV1.Get("/hotel/:id/rooms", hotelHandler.HandleGetHotelRooms)
 	apiV1.Get("/hotel/:id", hotelHandler.HandleGetHotel)
+
+	// Booking
+	apiV1.Get("/room", roomHandler.HandleGetRooms)
+	apiV1.Post("/room/:id/book", roomHandler.HandleBookRoom)
 
 	err = app.Listen(*portNumber)
 	if err != nil {
