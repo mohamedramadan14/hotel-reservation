@@ -10,15 +10,6 @@ type Hotel struct {
 	Rating   float64              `json:"rating" bson:"rating"`
 }
 
-//type RoomType int
-//
-//const (
-//	Single RoomType = iota + 1
-//	Double
-//	SeaSide
-//	Deluxe
-//)
-
 type Room struct {
 	ID      primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
 	SeeSide bool               `json:"seeSide" bson:"seeSide"`

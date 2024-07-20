@@ -41,11 +41,14 @@ func main() {
 			User:    userStore,
 			Booking: bookingStore,
 		}
-		roomHandler  = api.NewRoomHandler(store)
-		hotelHandler = api.NewHotelHandler(store)
-		app          = fiber.New(config)
-		auth         = app.Group("/api")
-		apiV1        = app.Group("/api/v1", middleware.JWTAuthentication(userStore))
+		roomHandler    = api.NewRoomHandler(store)
+		hotelHandler   = api.NewHotelHandler(store)
+		bookingHandler = api.NewBookingHandler(store)
+
+		app   = fiber.New(config)
+		auth  = app.Group("/api")
+		apiV1 = app.Group("/api/v1", middleware.JWTAuthentication(userStore))
+		admin = apiV1.Group("/admin", middleware.AdminAuth)
 	)
 
 	// Auth
@@ -63,9 +66,16 @@ func main() {
 	apiV1.Get("/hotel/:id/rooms", hotelHandler.HandleGetHotelRooms)
 	apiV1.Get("/hotel/:id", hotelHandler.HandleGetHotel)
 
-	// Booking
+	// Room
 	apiV1.Get("/room", roomHandler.HandleGetRooms)
 	apiV1.Post("/room/:id/book", roomHandler.HandleBookRoom)
+
+	// Booking
+	// TODO: Cancel A Booking
+	apiV1.Get("/booking/:id", bookingHandler.HandleGetBooking)
+
+	// Admin Routes
+	admin.Get("/bookings", bookingHandler.HandleGetBookings)
 
 	err = app.Listen(*portNumber)
 	if err != nil {

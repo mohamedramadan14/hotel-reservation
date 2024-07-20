@@ -42,16 +42,19 @@ func init() {
 	roomStore = db.NewMongoRoomStore(client, hotelStore)
 }
 
-func seedUser(fName, lName, email string) {
+func seedUser(fName string, lName string, email string, password string, isAdmin bool) {
 	user, err := types.NewUserFromParams(types.CreateUserParams{
 		Email:     email,
 		FirstName: fName,
 		LastName:  lName,
-		Password:  "testPass",
+		Password:  password,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	user.IsAdmin = isAdmin
+
 	_, err = userStore.CreateUser(ctx, user)
 	if err != nil {
 		log.Fatal(err)
@@ -109,6 +112,7 @@ func main() {
 
 		seedHotel(faker.Company().Name(), faker.Address().City(), float64(rand.Intn(51))/10.0)
 	}
-	seedUser("mohamed", "ramadan", "mo@gmail.com")
+	seedUser("mohamed", "ramadan", "mo@gmail.com", "testPass", false)
+	seedUser("Maged", "ramadan", "maged@gmail.com", "admin", true)
 	fmt.Println("Seeding completed...")
 }

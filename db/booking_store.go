@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"github.com/mohamedramadan14/hotel-reservation/types"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -11,6 +12,7 @@ import (
 type BookingStore interface {
 	InsertBooking(ctx context.Context, booking *types.Booking) (*types.Booking, error)
 	GetBookings(ctx context.Context, m bson.M) ([]*types.Booking, error)
+	GetBookingByID(ctx context.Context, id string) (*types.Booking, error)
 }
 
 type MongoBookingStore struct {
@@ -44,5 +46,19 @@ func (s *MongoBookingStore) GetBookings(ctx context.Context, filter bson.M) ([]*
 	if err := cur.All(ctx, &bookings); err != nil {
 		return nil, err
 	}
+	fmt.Println(bookings)
 	return bookings, nil
+}
+
+func (s *MongoBookingStore) GetBookingByID(ctx context.Context, id string) (*types.Booking, error) {
+	bookingID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, err
+	}
+	var booking types.Booking
+
+	if err := s.coll.FindOne(ctx, bson.M{"_id": bookingID}).Decode(&booking); err != nil {
+		return nil, err
+	}
+	return &booking, nil
 }
