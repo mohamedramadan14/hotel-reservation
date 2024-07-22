@@ -20,15 +20,19 @@ type testdb struct {
 }
 
 func (tdb *testdb) tearDown(t *testing.T) {
-	if err := tdb.client.Database(testDBName).Drop(context.TODO()); err != nil {
+	if err := tdb.client.Database("hotel-reservation").Drop(context.TODO()); err != nil {
 		t.Fatal(err)
 	}
 }
+
 func setup(_ *testing.T) *testdb {
 	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(testDBUri))
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	_ = client.Database(testDBName)
+
 	hotelStore := db.NewMongoHotelStore(client)
 	return &testdb{
 		client: client,
@@ -37,5 +41,6 @@ func setup(_ *testing.T) *testdb {
 			Room:    db.NewMongoRoomStore(client, hotelStore),
 			Booking: db.NewMongoBookingStore(client),
 			Hotel:   hotelStore,
-		}}
+		},
+	}
 }
