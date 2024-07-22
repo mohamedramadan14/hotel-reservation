@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/mohamedramadan14/hotel-reservation/db"
@@ -39,11 +40,11 @@ func (h *UserHandler) HandlePutUser(c *fiber.Ctx) error {
 	}
 	oid, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
-		return err
+		return ErrInvalidID()
 	}
 	filter := bson.M{"_id": oid}
 	if err := h.userStore.UpdateUser(c.Context(), filter, params); err != nil {
-		return err
+		return NewError(http.StatusBadRequest, "Can't update profile Check your data")
 	}
 
 	return c.JSON(map[string]string{"message": "user updated successfully"})
@@ -73,7 +74,7 @@ func (h *UserHandler) HandlePostUser(c *fiber.Ctx) error {
 func (h *UserHandler) HandleGetUsers(c *fiber.Ctx) error {
 	users, err := h.userStore.GetUsers(c.Context())
 	if err != nil {
-		return err
+		return NewError(http.StatusNotFound, "no users")
 	}
 	return c.JSON(users)
 }
@@ -87,9 +88,9 @@ func (h *UserHandler) HandleGetUser(c *fiber.Ctx) error {
 
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return c.JSON(map[string]string{"message": "not found"})
+			return ErrInvalidID()
 		}
-		return err
+		return NewError(http.StatusNotFound, "user not found")
 	}
 
 	return c.JSON(user)

@@ -21,6 +21,8 @@
 go.work
 go.work.sum
 
+.github/workflow
+
 # env file
 .env
 

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
-	"github.com/mohamedramadan14/hotel-reservation/api/middleware"
 	"github.com/mohamedramadan14/hotel-reservation/db/fixtures"
 	"github.com/mohamedramadan14/hotel-reservation/types"
 	"net/http"
@@ -18,15 +17,17 @@ func TestAdminGetBookings(t *testing.T) {
 	defer db.tearDown(t)
 
 	var (
-		adminUser      = fixtures.AddUser(db.Store, "maged", "gmail", true)
-		user           = fixtures.AddUser(db.Store, "mo", "gmail", false)
-		hotel          = fixtures.AddHotel(db.Store, "bar Hotel", "New York", 4.0, nil)
-		room           = fixtures.AddRoom(db.Store, "small", true, 261.5, hotel.ID)
-		from           = time.Now()
-		till           = time.Now().AddDate(0, 0, 3)
-		booking        = fixtures.AddBooking(db.Store, user.ID, room.ID, from, till)
-		app            = fiber.New()
-		admin          = app.Group("/", middleware.JWTAuthentication(db.Store.User), middleware.AdminAuth)
+		adminUser = fixtures.AddUser(db.Store, "maged", "gmail", true)
+		user      = fixtures.AddUser(db.Store, "mo", "gmail", false)
+		hotel     = fixtures.AddHotel(db.Store, "bar Hotel", "New York", 4.0, nil)
+		room      = fixtures.AddRoom(db.Store, "small", true, 261.5, hotel.ID)
+		from      = time.Now()
+		till      = time.Now().AddDate(0, 0, 3)
+		booking   = fixtures.AddBooking(db.Store, user.ID, room.ID, from, till)
+		app       = fiber.New(fiber.Config{
+			ErrorHandler: ErrorHandler,
+		})
+		admin          = app.Group("/", JWTAuthentication(db.Store.User), AdminAuth)
 		bookingHandler = NewBookingHandler(db.Store)
 	)
 
@@ -85,9 +86,11 @@ func TestUserGetBooking(t *testing.T) {
 		from                = time.Now()
 		till                = time.Now().AddDate(0, 0, 3)
 		booking             = fixtures.AddBooking(db.Store, user.ID, room.ID, from, till)
-		app                 = fiber.New()
-		route               = app.Group("/", middleware.JWTAuthentication(db.Store.User))
-		bookingHandler      = NewBookingHandler(db.Store)
+		app                 = fiber.New(fiber.Config{
+			ErrorHandler: ErrorHandler,
+		})
+		route          = app.Group("/", JWTAuthentication(db.Store.User))
+		bookingHandler = NewBookingHandler(db.Store)
 	)
 
 	route.Get("/:id", bookingHandler.HandleGetBooking)

@@ -17,7 +17,9 @@ func TestAuthenticateSuccess(t *testing.T) {
 	defer tdb.tearDown(t)
 
 	testUser := fixtures.AddUser(tdb.Store, "mo", "gmail", false)
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		ErrorHandler: ErrorHandler,
+	})
 	authHandler := NewAuthHandler(tdb.User)
 	app.Post("/auth", authHandler.HandleAuthentication)
 
@@ -61,7 +63,9 @@ func TestAuthenticateWithWrongPasswordFailure(t *testing.T) {
 
 	fixtures.AddUser(tdb.Store, "mo", "gmail", false)
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		ErrorHandler: ErrorHandler,
+	})
 	authHandler := NewAuthHandler(tdb.User)
 	app.Post("/auth", authHandler.HandleAuthentication)
 

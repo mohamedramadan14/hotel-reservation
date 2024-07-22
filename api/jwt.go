@@ -1,4 +1,4 @@
-package middleware
+package api
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/mohamedramadan14/hotel-reservation/db"
+	"net/http"
 	"os"
 	"time"
 )
@@ -15,7 +16,8 @@ func JWTAuthentication(userStore db.UserStore) fiber.Handler {
 		token, ok := c.GetReqHeaders()["X-Api-Token"]
 		if !ok {
 			fmt.Println("NO TOKEN")
-			return fmt.Errorf("unauthorized: %s", "Token is not present")
+			//return fmt.Errorf("unauthorized: %s", "Token is not present")
+			return ErrUnAuthorized()
 		}
 		claims, err := validateToken(token[len(token)-1])
 		if err != nil {
@@ -24,7 +26,7 @@ func JWTAuthentication(userStore db.UserStore) fiber.Handler {
 		userID := claims["id"].(string)
 		user, err := userStore.GetUserByID(c.Context(), userID)
 		if err != nil {
-			return fmt.Errorf("unauthorized")
+			return ErrUnAuthorized()
 		}
 		// set current authenticated user to the context
 		c.Context().SetUserValue("user", user)
@@ -36,7 +38,7 @@ func validateToken(tokenStr string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			fmt.Println("invalid signing method")
-			return nil, fmt.Errorf("unauthorized")
+			return nil, ErrUnAuthorized()
 		}
 
 		secret := os.Getenv("JWT_SECRET")
@@ -44,22 +46,22 @@ func validateToken(tokenStr string) (jwt.MapClaims, error) {
 	})
 	if err != nil {
 		log.Fatal("Failed to parse JWT token", err)
-		return nil, fmt.Errorf("unauthorized")
+		return nil, NewError(http.StatusUnauthorized, "invalid credentials")
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	expireStr, ok := claims["expire"].(string)
 	if !ok || !token.Valid {
-		return nil, fmt.Errorf("invalid credentials")
+		return nil, NewError(http.StatusUnauthorized, "invalid credentials")
 	}
 
 	expireTime, err := time.Parse(time.RFC3339, expireStr)
 	if err != nil {
-		return nil, fmt.Errorf("invalid expiration time format")
+		return nil, NewError(http.StatusUnauthorized, "token expired")
 	}
 
 	if time.Now().After(expireTime) {
-		return nil, fmt.Errorf("token has expired")
+		return nil, NewError(http.StatusUnauthorized, "token expired")
 	}
 
 	return claims, nil
