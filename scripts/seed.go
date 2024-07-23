@@ -50,5 +50,10 @@ func main() {
 	booking := fixtures.AddBooking(store, user.ID, room.ID, time.Now(), time.Now().AddDate(0, 0, 5))
 	fmt.Println("booking ---> ", booking)
 
+	fmt.Println("Creating 100 Dummy Hotels")
+
+	for i := 0; i < 100; i++ {
+		fixtures.AddHotel(store, faker.Company().Name(), faker.Address().Address(), faker.Float64(1, 1, 5), nil)
+	}
 	fmt.Println("Seeding completed...")
 }

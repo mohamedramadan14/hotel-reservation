@@ -33,21 +33,36 @@ func (h *HotelHandler) HandleGetHotelRooms(c *fiber.Ctx) error {
 	return c.JSON(resp)
 }
 
+type ResourceResp struct {
+	Results int `json:"results"`
+	Data    any `json:"data"`
+	Page    int `json:"page"`
+}
+
+type HotelQueryParams struct {
+	db.Pagination
+	Rating int
+}
+
 func (h *HotelHandler) HandleGetHotels(c *fiber.Ctx) error {
-	hotels, err := h.store.Hotel.GetHotels(c.Context(), nil)
+	var params HotelQueryParams
+	if err := c.QueryParser(&params); err != nil {
+		return NewError(http.StatusBadRequest, "Bad Request")
+	}
+
+	hotels, err := h.store.Hotel.GetHotels(c.Context(), nil, &params.Pagination)
 	if err != nil {
 		return NewError(http.StatusNotFound, "hotel not found")
 	}
-	return c.JSON(hotels)
+	resp := ResourceResp{Data: hotels, Results: len(hotels), Page: int(params.Page)}
+
+	return c.JSON(resp)
 }
 
 func (h *HotelHandler) HandleGetHotel(c *fiber.Ctx) error {
 	id := c.Params("id")
-	oid, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return ErrInvalidID()
-	}
-	hotel, err := h.store.Hotel.GetHotelByID(c.Context(), oid)
+
+	hotel, err := h.store.Hotel.GetHotelByID(c.Context(), id)
 	if err != nil {
 		return NewError(http.StatusNotFound, "hotel not found")
 	}

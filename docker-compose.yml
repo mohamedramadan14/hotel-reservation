@@ -3,8 +3,6 @@ services:
     image: mongo
     ports:
       - 27017:27017
-    volumes:
-      - ./data:/data/db
 
     mem_limit: 250M
     memswap_limit: 350M
